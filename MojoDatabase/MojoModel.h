@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "JSONModel.h"
+#import "JSONModelLib.h"
 @class MojoDatabase;
 
 @interface MojoModel : JSONModel {
