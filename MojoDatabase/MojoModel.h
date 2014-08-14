@@ -7,10 +7,10 @@
 //
 
 #import <Foundation/Foundation.h>
-
+#import "Jastor.h"
 @class MojoDatabase;
 
-@interface MojoModel : NSObject {
+@interface MojoModel : Jastor {
 	NSUInteger primaryKey;
 	BOOL savedInDatabase;
 }
