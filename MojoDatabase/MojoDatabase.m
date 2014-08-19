@@ -263,6 +263,9 @@
 -(void)bindArguments:(NSArray *)arguments toStatement:(sqlite3_stmt *)statement queryInfo:(NSDictionary *)queryInfo {
   int expectedArguments = sqlite3_bind_parameter_count(statement);
 
+    if(expectedArguments != [arguments count]){
+        return;
+    }
   NSAssert2(expectedArguments == [arguments count], @"Number of bound parameters does not match for sql: %@ parameters '%@'", [queryInfo objectForKey:@"sql"], [queryInfo objectForKey:@"parameters"]);
 
   for (int i=1; i<=expectedArguments; i++) {

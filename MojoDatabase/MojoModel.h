@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "JSONModelLib.h"
+
 @class MojoDatabase;
 
 @interface MojoModel : JSONModel {
@@ -35,5 +36,7 @@
 +(id)find:(NSUInteger)primaryKey;
 +(NSArray *)findAll;
 +(void)deleteAll;
-	
++(void)deleteWhere:(NSString *)where;
+-(BOOL)isTableExist;
+-(void)createTable;
 @end

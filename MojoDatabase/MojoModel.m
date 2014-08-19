@@ -8,7 +8,13 @@
 
 #import "MojoModel.h"
 #import "MojoDatabase.h"
-
+#import <objc/runtime.h>
+#define DBText  @"text"
+#define DBInt   @"integer"
+#define DBFloat @"real"
+#define DBData  @"blob"
+#define DBArray @"array"
+#define DBObject @"object"
 static MojoDatabase *database = nil;
 static NSMutableDictionary *tableCache = nil;
 
@@ -43,8 +49,21 @@ static NSMutableDictionary *tableCache = nil;
   return NSStringFromClass([self class]);
 }
 
-
+/*
+ * 判断一个表是否存在；
+ */
+- (BOOL)isTableExist{
+    NSArray *tableArray = database.tableNames;
+    for (NSString *tablename in tableArray) {
+        if ([tablename isEqualToString:[self class].tableName]) {
+            return YES;
+        }
+    }
+    return NO;
+}
 #pragma mark - DB Methods
+
+
 
 -(NSArray *)columns {
   if (tableCache == nil) {
@@ -79,12 +98,107 @@ static NSMutableDictionary *tableCache = nil;
       [values addObject:[NSNull null]];
     }
   }
-
   return values;
 }
 
 
 #pragma mark - ActiveRecord-like Methods
+
+-(void)createTable{
+    if(!self.isTableExist){
+        NSArray *propertyList = [self getPropertyList];
+        
+        NSString *sql = [NSString stringWithFormat:@"CREATE TABLE %@ (primaryKey integer primary key autoincrement, %@)", [[self class] tableName], [propertyList componentsJoinedByString:@","]];
+        [database executeSql:sql];
+    }
+}
+
+- (NSString *)dbTypeConvertFromObjc_property_t:(objc_property_t)property
+{
+    @synchronized(self){
+        char * type = property_copyAttributeValue(property, "T");
+        
+        switch(type[0]) {
+            case 'f' : //float
+            case 'd' : //double
+            {
+                return DBFloat;
+            }
+                break;
+                
+            case 'c':   // char
+            case 's' : //short
+            case 'i':   // int
+            case 'l':   // long
+            {
+                return DBInt;
+            }
+                break;
+                
+            case '*':   // char *
+                break;
+                
+            case '@' : //ObjC object
+                //Handle different clases in here
+            {
+                NSString *cls = [NSString stringWithUTF8String:type];
+                cls = [cls stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                cls = [cls stringByReplacingOccurrencesOfString:@"@" withString:@""];
+                cls = [cls stringByReplacingOccurrencesOfString:@"\"" withString:@""];
+                
+                if ([NSClassFromString(cls) isSubclassOfClass:[NSString class]]) {
+                    return DBText;
+                }
+                
+                if ([NSClassFromString(cls) isSubclassOfClass:[NSNumber class]]) {
+                    return DBText;
+                }
+                
+                if ([NSClassFromString(cls) isSubclassOfClass:[NSDictionary class]] || [NSClassFromString(cls) isSubclassOfClass:[NSMutableDictionary class]]) {
+                    return DBObject;
+                }
+                
+                if ([NSClassFromString(cls) isSubclassOfClass:[NSArray class]] ||[NSClassFromString(cls) isSubclassOfClass:[NSMutableArray class]] ||
+                    [cls hasPrefix:@"NSMutableArray"] ||
+                    [cls hasPrefix:@"NSArray"]) {
+                    return DBArray;
+                }
+                
+                if ([NSClassFromString(cls) isSubclassOfClass:[NSDate class]]) {
+                    return DBText;
+                }
+                
+                if ([NSClassFromString(cls) isSubclassOfClass:[NSData class]]) {
+                    return DBData;
+                }
+                
+                if ([NSClassFromString(cls) isSubclassOfClass:[MojoModel class]]) {
+                    return DBObject;
+                }
+            }
+                break;
+        }
+        
+        return DBText;
+    }
+}
+
+-(NSArray *)getPropertyList{
+    NSMutableArray *propertyNamesArray = [NSMutableArray array];
+    unsigned int propertyCount = 0;
+    objc_property_t *properties = class_copyPropertyList(self.class, &propertyCount);
+    for (unsigned int i = 0; i < propertyCount; ++i) {
+        objc_property_t property = properties[i];
+        const char * name = property_getName(property);
+        NSString * attributes = [self dbTypeConvertFromObjc_property_t:property];
+        if(![attributes isEqualToString:DBObject] && ![attributes isEqualToString:DBArray]
+           ){
+            [propertyNamesArray addObject:[NSString stringWithFormat:@"%@ %@",[NSString stringWithUTF8String:name],attributes]];
+        }
+    }
+    free(properties);
+    return propertyNamesArray;
+}
 
 -(void)save {
   [[self class] assertDatabaseExists];
@@ -120,6 +234,12 @@ static NSMutableDictionary *tableCache = nil;
 
   [database executeSql:sql withParameters:parameters];
   savedInDatabase = YES;
+}
+
++(void)deleteWhere:(NSString *)where{
+    [[self class] assertDatabaseExists];
+    NSString *sql = [NSString stringWithFormat:@"DELETE FROM %@ WHERE %@", [[self class] tableName],where];
+    [database executeSql:sql];
 }
 
 -(void)delete {
