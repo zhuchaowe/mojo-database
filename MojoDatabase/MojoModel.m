@@ -20,8 +20,20 @@ static NSMutableDictionary *tableCache = nil;
 
 
 @interface MojoModel(PrivateMethods)
+
+
 -(void)insert;
 -(void)update;
+@end
+
+@interface MojoModel()
+@property(nonatomic,retain)NSString *table;
+@property(nonatomic,retain)NSString *field;
+@property(nonatomic,retain)NSString *limit;
+@property(nonatomic,retain)NSString *order;
+@property(nonatomic,retain)NSString *where;
+@property(nonatomic,retain)NSString *group;
+@property(nonatomic,retain)NSMutableDictionary *map;
 @end
 
 @implementation MojoModel
@@ -49,6 +61,103 @@ static NSMutableDictionary *tableCache = nil;
   return NSStringFromClass([self class]);
 }
 
+-(id)init
+{
+    self = [super init];
+    if (self) {
+        //do initial class setup
+        [self resetAll];
+    }
+    return self;
+}
+
+-(void)resetAll{
+    self.table = NSStringFromClass([self class]);
+    self.field = @"*";
+    self.where = @"";
+    self.order = @"";
+    self.group = @"";
+    self.limit = @"";
+}
+
+-(MojoModel*)table:(NSString *)table{
+    self.table = table;
+    return self;
+}
+
+-(MojoModel*)field:(id)field{
+    if ([field isKindOfClass:[NSString class]]){
+        self.field = field;
+    }else if([field isKindOfClass:[NSArray class]]){
+        self.field = [(NSArray*)field componentsJoinedByString:@","];
+    }else{
+        self.field = @"*";
+    }
+    return self;
+}
+
+-(MojoModel*)limit:(NSUInteger)start size:(NSUInteger)size{
+    self.limit = [NSString stringWithFormat:@" LIMIT %lu,%lu",(unsigned long)start,(unsigned long)size];
+    return self;
+}
+
+-(MojoModel*)order:(NSString *)order{
+    self.order = [NSString stringWithFormat:@" ORDER BY %@",order];
+    return self;
+}
+
+-(MojoModel*)group:(NSString *)group{
+    self.group = [NSString stringWithFormat:@" GROUP BY %@",group];
+    return self;
+}
+
+-(MojoModel*)where:(NSMutableDictionary *)map{
+    NSMutableString *where = [NSMutableString stringWithString:@" WHERE "];
+    NSUInteger i =0;
+    [map enumerateKeysAndObjectsUsingBlock:^(NSString* key, NSString* value, BOOL *stop) {
+        
+        if([key isEqualToString:@"_string"]){
+            if(i == 0){
+                [where appendFormat:@" %@ ",value];
+            }else{
+                [where appendFormat:@" AND %@ ",value];
+            }
+        }else{
+            if(i == 0){
+                [where appendFormat:@" `%@` = ?",key];
+            }else{
+                [where appendFormat:@" AND `%@` = ?",key];
+            }
+        }
+    }];
+    self.where = where;
+    self.map = map;
+    return self;
+}
+
+-(NSArray *)select{
+    NSString *sql = [NSString stringWithFormat:@"SELECT %@ FROM %@ %@ %@ %@ %@",self.field,self.table,self.where,self.group,self.order,self.limit];
+    NSMutableDictionary *dict = [self.map mutableCopy];
+    [dict removeObjectForKey:@"_string"];
+    NSArray *results = [database executeSql:sql withParameters:[dict allValues] withClassForRow:[self class]];
+    [results setValue:[NSNumber numberWithBool:YES] forKey:@"savedInDatabase"];
+    
+    return results;
+}
+
+-(NSUInteger)getCount{
+    NSString *sql = [NSString stringWithFormat:@"SELECT count(*) AS c FROM %@ %@ %@ %@",self.table,self.where,self.group,self.order];
+    NSMutableDictionary *dict = [self.map mutableCopy];
+    [dict removeObjectForKey:@"_string"];
+    NSArray *array = [database executeSql:sql withParameters:[dict allValues]];
+    if(array.count >0 && [[array firstObject] objectForKey:@"c"]){
+        NSNumber *count = [[array firstObject] objectForKey:@"c"];
+        return count.integerValue;
+    }else{
+        return 0;
+    }
+}
+
 /*
  * 判断一个表是否存在；
  */
@@ -62,8 +171,6 @@ static NSMutableDictionary *tableCache = nil;
     return NO;
 }
 #pragma mark - DB Methods
-
-
 
 -(NSArray *)columns {
   if (tableCache == nil) {
@@ -262,8 +369,10 @@ static NSMutableDictionary *tableCache = nil;
 
 +(NSArray *)findWithSql:(NSString *)sql withParameters:(NSArray *)parameters {
   [self assertDatabaseExists];
+  [self beforeFindSql:&sql parameters:&parameters];
   NSArray *results = [database executeSql:sql withParameters:parameters withClassForRow:[self class]];
   [results setValue:[NSNumber numberWithBool:YES] forKey:@"savedInDatabase"];
+  [self afterFind:&results];
   return results;
 }
 
@@ -322,7 +431,8 @@ static NSMutableDictionary *tableCache = nil;
 -(void)beforeSave {}
 -(void)afterSave {}
 -(void)beforeDelete {}
-
++(void)afterFind:(NSArray **)results{}
++(void)beforeFindSql:(NSString **)sql parameters:(NSArray **)parameters{}
 
 #pragma mark -
 #pragma mark Debugging Methods

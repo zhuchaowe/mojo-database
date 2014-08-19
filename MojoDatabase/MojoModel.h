@@ -19,13 +19,27 @@
 @property (nonatomic) NSUInteger primaryKey;
 @property (nonatomic) BOOL savedInDatabase;
 
+
+
 +(void)setDatabase:(MojoDatabase *)newDatabase;
 +(MojoDatabase *)database;
+-(void)resetAll;
+-(MojoModel*)table:(NSString *)table;
+-(MojoModel*)field:(id)field;
+-(MojoModel*)limit:(NSUInteger)start size:(NSUInteger)size;
+-(MojoModel*)order:(NSString *)order;
+-(MojoModel*)group:(NSString *)group;
+-(MojoModel*)where:(NSMutableDictionary *)map;
+-(NSArray *)select;
+-(NSUInteger)getCount;
+
 -(void)save;
 -(void)beforeSave;
 -(void)afterSave;
 -(void)delete;
 -(void)beforeDelete;
++(void)afterFind:(NSArray **)results;
++(void)beforeFindSql:(NSString **)sql parameters:(NSArray **)parameters;
 +(NSArray *)findWithSql:(NSString *)sql withParameters:(NSArray *)parameters;
 +(NSArray *)findWithSqlWithParameters:(NSString *)sql, ...;
 +(NSArray *)findWithSql:(NSString *)sql;
