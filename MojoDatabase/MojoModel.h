@@ -33,11 +33,17 @@
 -(NSArray *)select;
 -(NSUInteger)getCount;
 
+-(void)update:(NSDictionary *)data;
+-(void)beforeUpdate:(NSDictionary *)data;
+-(void)afterUpdate:(NSDictionary *)data;
+
 -(void)save;
 -(void)beforeSave;
 -(void)afterSave;
+
 -(void)delete;
 -(void)beforeDelete;
+
 +(void)afterFind:(NSArray **)results;
 +(void)beforeFindSql:(NSString **)sql parameters:(NSArray **)parameters;
 +(NSArray *)findWithSql:(NSString *)sql withParameters:(NSArray *)parameters;

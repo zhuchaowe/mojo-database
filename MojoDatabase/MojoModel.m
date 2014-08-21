@@ -23,7 +23,7 @@ static NSMutableDictionary *tableCache = nil;
 
 
 -(void)insert;
--(void)update;
+-(void)updateAll;
 @end
 
 @interface MojoModel()
@@ -52,6 +52,7 @@ static NSMutableDictionary *tableCache = nil;
 }
 
 +(void)assertDatabaseExists {
+  [[self alloc] createTable];
   NSAssert1(database, @"Database not set. Set the database using [MojoModel setDatabase] before using Mojo Database methods.", @"");
 }
 
@@ -74,7 +75,8 @@ static NSMutableDictionary *tableCache = nil;
 -(void)resetAll{
     self.table = NSStringFromClass([self class]);
     self.field = @"*";
-    self.where = @"";
+    self.where = @"primaryKey = ?";
+    self.map = [NSMutableDictionary dictionaryWithObject:[NSNumber numberWithInteger:self.primaryKey] forKey:@"primaryKey"];
     self.order = @"";
     self.group = @"";
     self.limit = @"";
@@ -143,6 +145,17 @@ static NSMutableDictionary *tableCache = nil;
     [results setValue:[NSNumber numberWithBool:YES] forKey:@"savedInDatabase"];
     
     return results;
+}
+
+-(void)update:(NSDictionary *)data{
+    [self beforeUpdate:data];
+    if(savedInDatabase == YES){
+        NSString *setValues = [[[data allKeys] componentsJoinedByString:@" = ?, "] stringByAppendingString:@" = ?"];
+        NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE %@", self.table, setValues,self.where];
+        NSArray *parameters = [[data allValues] arrayByAddingObjectsFromArray:[self.map allValues]];
+        [database executeSql:sql withParameters:parameters];
+    }
+    [self afterUpdate:data];
 }
 
 -(NSUInteger)getCount{
@@ -314,7 +327,7 @@ static NSMutableDictionary *tableCache = nil;
   if (!savedInDatabase) {
     [self insert];
   } else {
-    [self update];
+    [self updateAll];
   }
 
   [self afterSave];
@@ -334,7 +347,8 @@ static NSMutableDictionary *tableCache = nil;
   primaryKey = [database lastInsertRowId];
 }
 
--(void)update {
+
+-(void)updateAll {
   NSString *setValues = [[[self columnsWithoutPrimaryKey] componentsJoinedByString:@" = ?, "] stringByAppendingString:@" = ?"];
   NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE primaryKey = ?", [[self class] tableName], setValues];
   NSArray *parameters = [[self propertyValues] arrayByAddingObject:[NSNumber numberWithUnsignedInt:(unsigned int)primaryKey]];
@@ -431,6 +445,8 @@ static NSMutableDictionary *tableCache = nil;
 -(void)beforeSave {}
 -(void)afterSave {}
 -(void)beforeDelete {}
+-(void)beforeUpdate:(NSDictionary *)data{}
+-(void)afterUpdate:(NSDictionary *)data{}
 +(void)afterFind:(NSArray **)results{}
 +(void)beforeFindSql:(NSString **)sql parameters:(NSArray **)parameters{}
 
