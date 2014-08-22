@@ -114,24 +114,27 @@ static NSMutableDictionary *tableCache = nil;
 }
 
 -(MojoModel*)where:(NSMutableDictionary *)map{
-    NSMutableString *where = [NSMutableString stringWithString:@" WHERE "];
-    NSUInteger i =0;
-    [map enumerateKeysAndObjectsUsingBlock:^(NSString* key, NSString* value, BOOL *stop) {
-        
-        if([key isEqualToString:@"_string"]){
-            if(i == 0){
-                [where appendFormat:@" %@ ",value];
+    NSMutableString *where = [NSMutableString string];
+    if(map != nil){
+        [where appendString:@" WHERE "];
+        NSUInteger i =0;
+        [map enumerateKeysAndObjectsUsingBlock:^(NSString* key, NSString* value, BOOL *stop) {
+            
+            if([key isEqualToString:@"_string"]){
+                if(i == 0){
+                    [where appendFormat:@" %@ ",value];
+                }else{
+                    [where appendFormat:@" AND %@ ",value];
+                }
             }else{
-                [where appendFormat:@" AND %@ ",value];
+                if(i == 0){
+                    [where appendFormat:@" `%@` = ?",key];
+                }else{
+                    [where appendFormat:@" AND `%@` = ?",key];
+                }
             }
-        }else{
-            if(i == 0){
-                [where appendFormat:@" `%@` = ?",key];
-            }else{
-                [where appendFormat:@" AND `%@` = ?",key];
-            }
-        }
-    }];
+        }];
+    }
     self.where = where;
     self.map = map;
     return self;
