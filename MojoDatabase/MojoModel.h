@@ -7,11 +7,11 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "JSONModelLib.h"
+
 
 @class MojoDatabase;
 
-@interface MojoModel : JSONModel {
+@interface MojoModel : NSObject {
 	NSUInteger primaryKey;
 	BOOL savedInDatabase;
 }
