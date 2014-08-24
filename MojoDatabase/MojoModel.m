@@ -143,12 +143,10 @@ static NSMutableDictionary *tableCache = nil;
 
 -(void)update:(NSDictionary *)data{
     [self beforeUpdate:data];
-    if(savedInDatabase == YES){
-        NSString *setValues = [[[data allKeys] componentsJoinedByString:@" = ?, "] stringByAppendingString:@" = ?"];
-        NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ %@", self.table, setValues,self.where];
-        NSArray *parameters = [[data allValues] arrayByAddingObjectsFromArray:[self.map allValues]];
-        [database executeSql:sql withParameters:parameters];
-    }
+    NSString *setValues = [[[data allKeys] componentsJoinedByString:@" = ?, "] stringByAppendingString:@" = ?"];
+    NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ %@", self.table, setValues,self.where];
+    NSArray *parameters = [[data allValues] arrayByAddingObjectsFromArray:[self.map allValues]];
+    [database executeSql:sql withParameters:parameters];
     [self afterUpdate:data];
 }
 
