@@ -241,6 +241,7 @@ static NSMutableDictionary *tableCache = nil;
         switch(type[0]) {
             case 'f' : //float
             case 'd' : //double
+            
             {
                 return DBFloat;
             }
@@ -250,6 +251,7 @@ static NSMutableDictionary *tableCache = nil;
             case 's' : //short
             case 'i':   // int
             case 'l':   // long
+            case 'Q' :
             {
                 return DBInt;
             }
