@@ -241,17 +241,20 @@ static NSMutableDictionary *tableCache = nil;
         switch(type[0]) {
             case 'f' : //float
             case 'd' : //double
-            
             {
                 return DBFloat;
             }
-                break;
-                
+              break;
             case 'c':   // char
             case 's' : //short
             case 'i':   // int
             case 'l':   // long
-            case 'Q' :
+            case 'q' : // long long
+            case 'I': // unsigned int
+            case 'S': // unsigned short
+            case 'L': // unsigned long
+            case 'Q' :  // unsigned long long
+            case 'B': // BOOL
             {
                 return DBInt;
             }
