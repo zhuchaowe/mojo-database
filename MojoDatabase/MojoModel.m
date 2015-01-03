@@ -33,7 +33,7 @@ static NSMutableDictionary *tableCache = nil;
 @property(nonatomic,retain)NSString *order;
 @property(nonatomic,retain)NSString *where;
 @property(nonatomic,retain)NSString *group;
-@property(nonatomic,retain)NSMutableDictionary *map;
+@property(nonatomic,retain)NSMutableArray *map;
 @end
 
 @implementation MojoModel
@@ -76,7 +76,7 @@ static NSMutableDictionary *tableCache = nil;
     self.table = NSStringFromClass([self class]);
     self.field = @"*";
     self.where = @" WHERE primaryKey = ?";
-    self.map = [NSMutableDictionary dictionaryWithObject:[NSNumber numberWithInteger:self.primaryKey] forKey:@"primaryKey"];
+    self.map = [NSMutableArray arrayWithObject:[NSNumber numberWithInt:self.primaryKey]];
     self.order = @"";
     self.group = @"";
     self.limit = @"";
@@ -113,6 +113,12 @@ static NSMutableDictionary *tableCache = nil;
     return self;
 }
 
+-(MojoModel*)whereRaw:(NSString *)str value:(NSDictionary *)map{
+    self.where = [NSMutableString stringWithFormat:@" WHERE %@",str];
+    self.map = [NSMutableArray arrayWithArray:[map allValues]];
+    return self;
+}
+
 -(MojoModel*)where:(NSDictionary *)map{
     NSMutableString *where = [NSMutableString string];
     if(map != nil){
@@ -126,16 +132,15 @@ static NSMutableDictionary *tableCache = nil;
         }];
     }
     self.where = where;
-    self.map = [NSMutableDictionary dictionaryWithDictionary:map];
+    self.map = [NSMutableArray arrayWithArray:[map allValues]];
     return self;
 }
 
 -(NSArray *)select{
     [[self class] assertDatabaseExists];
     NSString *sql = [NSString stringWithFormat:@"SELECT %@ FROM %@ %@ %@ %@ %@",self.field,self.table,self.where,self.group,self.order,self.limit];
-    NSMutableDictionary *dict = [self.map mutableCopy];
-    [dict removeObjectForKey:@"_string"];
-    NSArray *results = [database executeSql:sql withParameters:[dict allValues] withClassForRow:[self class]];
+    
+    NSArray *results = [database executeSql:sql withParameters:self.map withClassForRow:[self class]];
     [results setValue:[NSNumber numberWithBool:YES] forKey:@"savedInDatabase"];
     
     return results;
@@ -145,7 +150,7 @@ static NSMutableDictionary *tableCache = nil;
     [self beforeUpdate:data];
     NSString *setValues = [[[data allKeys] componentsJoinedByString:@" = ?, "] stringByAppendingString:@" = ?"];
     NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ %@", self.table, setValues,self.where];
-    NSArray *parameters = [[data allValues] arrayByAddingObjectsFromArray:[self.map allValues]];
+    NSArray *parameters = [[data allValues] arrayByAddingObjectsFromArray:self.map];
     [database executeSql:sql withParameters:parameters];
     [self afterUpdate:data];
 }
@@ -154,16 +159,14 @@ static NSMutableDictionary *tableCache = nil;
     [[self class] assertDatabaseExists];
     [self beforeDelete];
     NSString *sql = [NSString stringWithFormat:@"DELETE FROM %@ %@", self.table,self.where];
-    [database executeSql:sql withParameters:[self.map allValues]];
+    [database executeSql:sql withParameters:self.map];
     [self afterDelete];
 }
 
 -(NSUInteger)getCount{
     [[self class] assertDatabaseExists];
     NSString *sql = [NSString stringWithFormat:@"SELECT count(*) AS c FROM %@ %@ %@ %@",self.table,self.where,self.group,self.order];
-    NSMutableDictionary *dict = [self.map mutableCopy];
-    [dict removeObjectForKey:@"_string"];
-    NSArray *array = [database executeSql:sql withParameters:[dict allValues]];
+    NSArray *array = [database executeSql:sql withParameters:self.map];
     if(array.count >0 && [[array firstObject] objectForKey:@"c"]){
         NSNumber *count = [[array firstObject] objectForKey:@"c"];
         return count.integerValue;
