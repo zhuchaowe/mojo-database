@@ -11,6 +11,9 @@
 
 @interface AppDatabase : MojoDatabase {
 }
+-(void)runMigrations;
+-(NSUInteger)databaseVersion;
+-(void)setDatabaseVersion:(NSUInteger)newVersionNumber;
 
 -(id)initWithMigrations;
 -(id)initWithMigrations:(BOOL)loggingEnabled;
