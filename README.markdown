@@ -7,7 +7,7 @@ The goal is to provide a nicer user interface for using SQLite with Objective-C 
 
 ## Installation
 
-To install Mojo Database, simply drag the MojoDatabase directory into your XCode project and choose "copy files to destination" when prompted.
+To install Mojo Database, simply drag the MojoDatabase directory into your Xcode project and choose "copy files to destination" when prompted.
 
 ## Usage
 
